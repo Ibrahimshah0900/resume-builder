@@ -35,21 +35,21 @@ st.markdown("Choose a template and fill in your details to generate a profession
 with st.form("resume_form"):
     st.header("🎨 Choose Resume Template")
     
-    # Template selection with radio buttons
-    template_choice = st.radio(
-        "Select Template Style:",
-        ["1 - Classic Blue", "2 - Modern Green", "3 - Minimal Dark"],
-        index=0,
-        horizontal=True
-    )
-    
-    # Show preview description based on selection
-    if template_choice == "1 - Classic Blue":
-        st.info("📘 **Classic Blue** - Professional, traditional design with blue accent colors")
-    elif template_choice == "2 - Modern Green":
-        st.info("💚 **Modern Green** - Clean, contemporary style with green accents")
-    else:
-        st.info("⬛ **Minimal Dark** - Bold, modern design with dark header")
+# Template selection with radio buttons
+template_choice = st.radio(
+    "Select Template Style:",
+    ["1 - Classic Blue", "2 - Modern Green", "3 - Minimal Dark"],
+    index=0,
+    horizontal=True
+)
+
+# Show preview description based on selection - UPDATED
+if template_choice == "1 - Classic Blue":
+    st.info("📘 **Classic Blue** - Professional, traditional design with blue accent colors")
+elif template_choice == "2 - Modern Green":
+    st.info("💚 **Modern Green** - Clean, contemporary style with green accents")
+elif template_choice == "3 - Minimal Dark":
+    st.info("⬛ **Minimal Dark** - Bold, modern design with dark header")
     
     st.markdown("---")
     
