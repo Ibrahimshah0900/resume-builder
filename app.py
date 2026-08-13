@@ -6,11 +6,54 @@ from utils import validate_email, validate_phone, format_skills
 
 st.set_page_config(page_title="AI Resume Builder", page_icon="📄", layout="wide")
 
-st.title("📄 AI Resume Builder")
-st.markdown("Create a professional resume in minutes!")
+# Custom CSS for better styling
+st.markdown("""
+    <style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1E88E5;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .template-card {
+        background: #f0f2f6;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 2px solid #ddd;
+        text-align: center;
+    }
+    .template-card:hover {
+        border-color: #1E88E5;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown('<p class="main-header">📄 AI Resume Builder</p>', unsafe_allow_html=True)
+st.markdown("Choose a template and fill in your details to generate a professional resume!")
 
 with st.form("resume_form"):
-    st.header("Personal Information")
+    st.header("🎨 Choose Resume Template")
+    
+    # Template selection with radio buttons
+    template_choice = st.radio(
+        "Select Template Style:",
+        ["1 - Classic Blue", "2 - Modern Green", "3 - Minimal Dark"],
+        index=0,
+        horizontal=True
+    )
+    
+    # Show preview description based on selection
+    if template_choice == "1 - Classic Blue":
+        st.info("📘 **Classic Blue** - Professional, traditional design with blue accent colors")
+    elif template_choice == "2 - Modern Green":
+        st.info("💚 **Modern Green** - Clean, contemporary style with green accents")
+    else:
+        st.info("⬛ **Minimal Dark** - Bold, modern design with dark header")
+    
+    st.markdown("---")
+    
+    st.header("📝 Personal Information")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -23,19 +66,19 @@ with st.form("resume_form"):
         github = st.text_input("GitHub URL")
         location = st.text_input("Location")
     
-    st.header("Education *")
+    st.header("🎓 Education *")
     education = st.text_area("Education Details", height=100)
     
-    st.header("Work Experience")
+    st.header("💼 Work Experience")
     experience = st.text_area("Experience Details", height=150)
     
-    st.header("Skills *")
+    st.header("🛠️ Skills *")
     skills = st.text_input("Skills (comma separated)")
     
-    st.header("Projects")
+    st.header("📂 Projects")
     projects = st.text_area("Projects", height=100)
     
-    st.header("Certifications")
+    st.header("📜 Certifications")
     certifications = st.text_area("Certifications", height=80)
     
     submitted = st.form_submit_button("✨ Generate Resume")
@@ -46,6 +89,9 @@ if submitted:
     else:
         with st.spinner("Generating your resume..."):
             try:
+                # Extract template number
+                template_num = template_choice.split(" - ")[0]
+                
                 user_data = {
                     "full_name": full_name,
                     "email": email,
@@ -61,16 +107,20 @@ if submitted:
                 }
                 
                 pdf_filename = f"{full_name.replace(' ', '_')}_Resume.pdf"
-                pdf_path = generate_pdf_resume(user_data, pdf_filename)
+                pdf_path = generate_pdf_resume(user_data, pdf_filename, template_num)
                 score, feedback = score_resume(user_data)
                 suggestions = get_keyword_suggestions(user_data["skills"])
                 
-                st.success("✅ Resume generated!")
-                st.metric("Resume Score", f"{score}/100")
-                st.info(f"💡 {feedback}")
+                st.success("✅ Resume generated successfully!")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("📊 Resume Score", f"{score}/100")
+                with col2:
+                    st.info(f"💡 {feedback}")
                 
                 if suggestions:
-                    st.write("Suggested skills to add:", ", ".join(suggestions))
+                    st.write("💡 **Suggested skills to add:**", ", ".join(suggestions))
                 
                 with open(pdf_path, "rb") as f:
                     st.download_button("📥 Download PDF", f, file_name=pdf_filename, mime="application/pdf")
@@ -79,3 +129,11 @@ if submitted:
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+
+st.sidebar.markdown("""
+    ### 💡 Tips
+    - Choose a template that fits your style
+    - Use action words (Developed, Created, Led)
+    - Quantify achievements with numbers
+    - List 5-10 relevant skills
+""")
