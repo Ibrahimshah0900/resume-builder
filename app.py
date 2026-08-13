@@ -107,7 +107,7 @@ if submitted:
                 }
                 
                 pdf_filename = f"{full_name.replace(' ', '_')}_Resume.pdf"
-                pdf_path = generate_pdf_resume(user_data, pdf_filename)
+                pdf_path = generate_pdf_resume(user_data, pdf_filename, template_num)
                 score, feedback = score_resume(user_data)
                 suggestions = get_keyword_suggestions(user_data["skills"])
                 
