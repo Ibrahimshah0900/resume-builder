@@ -6,7 +6,6 @@ from utils import validate_email, validate_phone, format_skills
 
 st.set_page_config(page_title="AI Resume Builder", page_icon="📄", layout="wide")
 
-# Custom CSS for better styling
 st.markdown("""
     <style>
     .main-header {
@@ -15,16 +14,6 @@ st.markdown("""
         color: #1E88E5;
         text-align: center;
         margin-bottom: 0.5rem;
-    }
-    .template-card {
-        background: #f0f2f6;
-        padding: 1rem;
-        border-radius: 10px;
-        border: 2px solid #ddd;
-        text-align: center;
-    }
-    .template-card:hover {
-        border-color: #1E88E5;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -35,32 +24,39 @@ st.markdown("Choose a template and fill in your details to generate a profession
 with st.form("resume_form"):
     st.header("🎨 Choose Resume Template")
     
-    # Template selection with radio buttons
     template_choice = st.radio(
         "Select Template Style:",
-        ["1 - Classic Blue", "2 - Modern Green", "3 - Minimal Dark"],
+        [
+            "1 - Classic Blue (Two-Column)",
+            "2 - Modern Green (Accent Bar)",
+            "3 - Minimal Dark (Clean)",
+            "4 - Elegant Gold (Premium)",
+            "5 - Professional Grid (Boxed)"
+        ],
         index=0,
         horizontal=True
     )
     
-    # Show preview description based on selection
-    if template_choice == "1 - Classic Blue":
-        st.info("📘 **Classic Blue** - Professional, traditional design with blue accent colors")
-    elif template_choice == "2 - Modern Green":
-        st.info("💚 **Modern Green** - Clean, contemporary style with green accents")
-    elif template_choice == "3 - Minimal Dark":
-        st.info("⬛ **Minimal Dark** - Bold, modern design with dark header")
+    # Descriptions for each template
+    if template_choice.startswith("1"):
+        st.info("📘 **Classic Blue** – Two‑column layout with a professional sidebar.")
+    elif template_choice.startswith("2"):
+        st.info("💚 **Modern Green** – Clean design with a left accent color bar.")
+    elif template_choice.startswith("3"):
+        st.info("⬛ **Minimal Dark** – Bold minimalist typography with a dark header.")
+    elif template_choice.startswith("4"):
+        st.info("🌟 **Elegant Gold** – Premium gold accents and serif fonts for a luxury feel.")
+    elif template_choice.startswith("5"):
+        st.info("📦 **Professional Grid** – Boxed sections with a clean, structured layout.")
     
     st.markdown("---")
     
     st.header("📝 Personal Information")
     col1, col2 = st.columns(2)
-    
     with col1:
         full_name = st.text_input("Full Name *")
         email = st.text_input("Email *")
         phone = st.text_input("Phone *")
-    
     with col2:
         linkedin = st.text_input("LinkedIn URL")
         github = st.text_input("GitHub URL")
@@ -89,7 +85,6 @@ if submitted:
     else:
         with st.spinner("Generating your resume..."):
             try:
-                # Extract template number (1, 2, or 3)
                 template_num = template_choice.split(" - ")[0]
                 
                 user_data = {
