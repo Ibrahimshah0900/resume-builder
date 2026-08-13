@@ -57,7 +57,7 @@ class ResumeTemplate2(FPDF):
     def add_section(self, title, content):
         self.set_font("Arial", "B", 11)
         self.set_text_color(0, 120, 80)
-        self.cell(0, 8, f"▸ {title}", 0, 1, "L")
+        self.cell(0, 8, f"> {title}", 0, 1, "L")
         self.set_draw_color(200, 200, 200)
         self.line(15, self.get_y(), 195, self.get_y())
         self.ln(2)
@@ -69,13 +69,13 @@ class ResumeTemplate2(FPDF):
     def add_skills(self, skills_list):
         self.set_font("Arial", "B", 11)
         self.set_text_color(0, 120, 80)
-        self.cell(0, 8, f"▸ SKILLS", 0, 1, "L")
+        self.cell(0, 8, f"> SKILLS", 0, 1, "L")
         self.set_draw_color(200, 200, 200)
         self.line(15, self.get_y(), 195, self.get_y())
         self.ln(2)
         self.set_font("Arial", "", 10)
         self.set_text_color(0, 0, 0)
-        skills_text = "\n".join([f"• {skill}" for skill in skills_list])
+        skills_text = "\n".join([f"- {skill}" for skill in skills_list])
         self.multi_cell(0, 5, skills_text)
         self.ln(2)
 
@@ -114,7 +114,7 @@ class ResumeTemplate3(FPDF):
         self.ln(2)
         self.set_font("Arial", "", 10)
         self.set_text_color(0, 0, 0)
-        skills_text = "\n".join([f"• {skill}" for skill in skills_list])
+        skills_text = "\n".join([f"- {skill}" for skill in skills_list])
         self.multi_cell(0, 5, skills_text)
         self.ln(2)
 
