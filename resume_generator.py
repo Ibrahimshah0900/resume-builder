@@ -18,20 +18,21 @@ class BaseResume(FPDF):
         self.photo_size = size
     
     def add_photo_top_right(self):
-    if self.photo_path and os.path.exists(self.photo_path):
-        try:
-            img = Image.open(self.photo_path)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            temp_path = 'outputs/temp_photo.jpg'
-            img.save(temp_path, 'JPEG', quality=85)
-            self.image(temp_path, 160, 8, 35, 35)  # Moved slightly right and down
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            return True
-        except:
-            return False
-    return False
+        """Add photo at top right corner - clean placement"""
+        if self.photo_path and os.path.exists(self.photo_path):
+            try:
+                img = Image.open(self.photo_path)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                temp_path = 'outputs/temp_photo.jpg'
+                img.save(temp_path, 'JPEG', quality=85)
+                self.image(temp_path, 160, 8, 35, 35)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return True
+            except:
+                return False
+        return False
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 12)
@@ -67,17 +68,11 @@ class TemplateClassic(BaseResume):
         self.set_fill_color(25, 50, 100)
         self.rect(0, 0, 210, 55, "F")
         self.set_y(10)
-        
-        # Photo at TOP RIGHT (clean placement)
         self.add_photo_top_right()
-        
-        # Name - starts from left, no overlap with photo
         self.set_x(15)
         self.set_font("Arial", "B", 18)
         self.set_text_color(255, 255, 255)
         self.cell(0, 12, self.name, 0, 1, "L")
-        
-        # Contact - below name
         self.set_x(15)
         self.set_font("Arial", "", 10)
         self.set_text_color(200, 210, 230)
@@ -103,15 +98,11 @@ class TemplateModern(BaseResume):
         self.set_fill_color(0, 150, 100)
         self.rect(0, 0, 8, 297, "F")
         self.set_y(15)
-        
-        # Photo at TOP RIGHT
         self.add_photo_top_right()
-        
         self.set_x(20)
         self.set_font("Arial", "B", 22)
         self.set_text_color(0, 0, 0)
         self.cell(0, 12, self.name, 0, 1, "L")
-        
         self.set_x(20)
         self.set_font("Arial", "", 10)
         self.set_text_color(80, 80, 80)
@@ -149,15 +140,11 @@ class TemplateModern(BaseResume):
 class TemplateMinimal(BaseResume):
     def header(self):
         self.set_y(15)
-        
-        # Photo at TOP RIGHT
         self.add_photo_top_right()
-        
         self.set_x(15)
         self.set_font("Arial", "B", 24)
         self.set_text_color(30, 30, 30)
         self.cell(0, 12, self.name, 0, 1, "L")
-        
         self.set_x(15)
         self.set_font("Arial", "", 10)
         self.set_text_color(100, 100, 100)
@@ -201,15 +188,11 @@ class TemplateGold(BaseResume):
         self.set_fill_color(200, 170, 110)
         self.rect(10, 10, 190, 16, "F")
         self.set_y(14)
-        
-        # Photo at TOP RIGHT
         self.add_photo_top_right()
-        
         self.set_x(18)
         self.set_font("Times", "B", 14)
         self.set_text_color(255, 255, 255)
         self.cell(0, 8, self.name, 0, 1, "L")
-        
         self.set_x(18)
         self.set_font("Times", "", 9)
         self.set_text_color(255, 255, 255)
@@ -247,15 +230,11 @@ class TemplateGrid(BaseResume):
         self.set_fill_color(240, 240, 240)
         self.rect(0, 0, 210, 45, "F")
         self.set_y(8)
-        
-        # Photo at TOP RIGHT
         self.add_photo_top_right()
-        
         self.set_x(15)
         self.set_font("Arial", "B", 16)
         self.set_text_color(0, 0, 0)
         self.cell(0, 12, self.name, 0, 1, "L")
-        
         self.set_x(15)
         self.set_font("Arial", "", 9)
         self.set_text_color(80, 80, 80)
@@ -329,7 +308,7 @@ def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
         pdf = TemplateClassic()
     
     if photo_path and os.path.exists(photo_path):
-        pdf.set_photo(photo_path, size=32)
+        pdf.set_photo(photo_path, size=35)
     
     pdf.name = user_data["full_name"].upper()
     contact = f"{user_data['email']} | {user_data['phone']}"
