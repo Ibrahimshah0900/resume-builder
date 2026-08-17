@@ -2,3 +2,4 @@ streamlit
 fpdf 
 pandas 
 scikit-learn 
+opencv-python-headless
