@@ -147,7 +147,7 @@ MIT License - Free for personal and commercial use.
 
 ## 📧 Contact
 
-Created by [Your Name] - Feel free to reach out!
+Created by Muhammad Ibrahim Hashmi  - Feel free to reach out!
 
 ---
 
