@@ -1,250 +1,328 @@
-import streamlit as st
+from fpdf import FPDF
 import os
-from resume_generator import generate_pdf_resume
-from resume_scorer import score_resume, get_keyword_suggestions
-from utils import validate_email, validate_phone, format_skills
+from datetime import datetime
 from PIL import Image
-import cv2
-import numpy as np
 
-st.set_page_config(page_title="AI Resume Builder", page_icon="📄", layout="wide")
-
-st.markdown("""
-    <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1E88E5;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown('<p class="main-header">📄 AI Resume Builder</p>', unsafe_allow_html=True)
-st.markdown("Choose a template and fill in your details to generate a professional resume!")
-
-def detect_face_and_crop(image_path, crop_adjust=0):
-    """Detect face with manual crop adjustment"""
-    try:
-        img = cv2.imread(image_path)
-        if img is None:
-            return None
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        )
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-        
-        if len(faces) == 0:
-            return None
-        
-        (x, y, w, h) = max(faces, key=lambda f: f[2] * f[3])
-        
-        padding = max(w, h) // 2
-        x1 = max(0, x - padding)
-        y1 = max(0, y - padding + crop_adjust)
-        x2 = min(img.shape[1], x + w + padding)
-        y2 = min(img.shape[0], y + h + padding + crop_adjust)
-        
-        cropped = img[y1:y2, x1:x2]
-        cropped_pil = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
-        return cropped_pil
-    except:
-        return None
-
-def crop_center_with_adjust(img, crop_adjust=0):
-    """Center crop with vertical adjustment"""
-    width, height = img.size
-    min_side = min(width, height)
-    left = (width - min_side) // 2
-    top = (height - min_side) // 2 + crop_adjust
-    top = max(0, top)
-    bottom = top + min_side
-    return img.crop((left, top, left + min_side, bottom))
-
-with st.form("resume_form"):
-    st.header("🎨 Choose Resume Template")
+# ============================================
+# BASE CLASS with PHOTO SUPPORT
+# ============================================
+class BaseResume(FPDF):
+    def __init__(self):
+        super().__init__()
+        self.set_auto_page_break(auto=True, margin=15)
+        self.photo_path = None
+        self.photo_size = 30
     
-    template_choice = st.radio(
-        "Select Template Style:",
-        [
-            "1 - Classic Blue",
-            "2 - Modern Green",
-            "3 - Minimal Dark",
-            "4 - Elegant Gold",
-            "5 - Professional Grid"
-        ],
-        index=0,
-        horizontal=True
-    )
+    def set_photo(self, photo_path, size=30):
+        self.photo_path = photo_path
+        self.photo_size = size
     
-    if template_choice.startswith("1"):
-        st.info("📘 **Classic Blue** – Professional two-column layout")
-    elif template_choice.startswith("2"):
-        st.info("💚 **Modern Green** – Clean design with accent bar")
-    elif template_choice.startswith("3"):
-        st.info("⬛ **Minimal Dark** – Bold minimalist design")
-    elif template_choice.startswith("4"):
-        st.info("🌟 **Elegant Gold** – Premium gold accents")
-    elif template_choice.startswith("5"):
-        st.info("📦 **Professional Grid** – Boxed sections layout")
-    
-    st.markdown("---")
-    
-    st.header("📝 Personal Information")
-    col1, col2 = st.columns(2)
-    with col1:
-        full_name = st.text_input("Full Name *")
-        email = st.text_input("Email *")
-        phone = st.text_input("Phone *")
-    with col2:
-        linkedin = st.text_input("LinkedIn URL")
-        github = st.text_input("GitHub URL")
-        location = st.text_input("Location")
-    
-    st.header("🎓 Education *")
-    education = st.text_area("Education Details", height=100)
-    
-    st.header("💼 Work Experience")
-    experience = st.text_area("Experience Details", height=150)
-    
-    st.header("🛠️ Skills *")
-    skills = st.text_input("Skills (comma separated)")
-    
-    st.header("📂 Projects")
-    projects = st.text_area("Projects", height=100)
-    
-    st.header("📜 Certifications")
-    certifications = st.text_area("Certifications", height=80)
-    
-    # ============================================
-    # REAL-TIME PHOTO CROP PREVIEW
-    # ============================================
-    st.header("📸 Profile Photo")
-    st.markdown("Upload a photo. Use the slider to crop around your face (real-time preview)")
-    
-    uploaded_file = st.file_uploader(
-        "Upload your photo (JPG/PNG)",
-        type=["jpg", "jpeg", "png"]
-    )
-    
-    photo_path = None
-    crop_adjust = 0
-    
-    if uploaded_file is not None:
-        os.makedirs("outputs", exist_ok=True)
-        temp_path = os.path.join("outputs", "uploaded_photo.jpg")
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        # Show original and slider in columns
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            st.image(temp_path, width=200, caption="Original Photo")
-        
-        with col2:
-            # Crop slider with real-time adjustment
-            crop_adjust = st.slider(
-                "Move crop up/down to center face",
-                min_value=-80,
-                max_value=80,
-                value=0,
-                step=5,
-                help="Move slider until your face is centered"
-            )
-        
-        # REAL-TIME PREVIEW: Show cropped image that updates with slider
-        st.write("**Real-time preview:**")
-        
-        # Detect face and crop with current slider value
-        cropped_img = detect_face_and_crop(temp_path, crop_adjust)
-        
-        if cropped_img is not None:
-            # Show real-time cropped preview
-            st.image(cropped_img, width=150, caption="✅ Live Preview (Face detected)")
-            # Save the final cropped version
-            cropped_path = os.path.join("outputs", "cropped_photo.jpg")
-            cropped_img.save(cropped_path, "JPEG", quality=90)
-            photo_path = cropped_path
-            st.success("✅ Photo ready! Face detected and cropped.")
-        else:
-            # Fallback: center crop with adjustment
-            img = Image.open(temp_path)
-            cropped = crop_center_with_adjust(img, crop_adjust)
-            st.image(cropped, width=150, caption="⚠️ Live Preview (Center cropped)")
-            cropped_path = os.path.join("outputs", "cropped_photo.jpg")
-            cropped.save(cropped_path, "JPEG", quality=90)
-            photo_path = cropped_path
-            st.warning("⚠️ No face detected. Showing center crop. Try adjusting slider.")
-        
-        # Note about real-time updates
-        st.caption("💡 Move the slider above to see the crop update in real-time")
-    
-    submitted = st.form_submit_button("✨ Generate Resume")
-
-if submitted:
-    if not full_name or not email or not phone or not education or not skills:
-        st.error("⚠️ Please fill all required fields (*)")
-    else:
-        with st.spinner("Generating your resume..."):
+    def add_photo_top_right(self):
+        """Add photo at top right corner - clean placement"""
+        if self.photo_path and os.path.exists(self.photo_path):
             try:
-                template_num = template_choice.split(" - ")[0]
-                
-                user_data = {
-                    "full_name": full_name,
-                    "email": email,
-                    "phone": phone,
-                    "location": location,
-                    "linkedin": linkedin,
-                    "github": github,
-                    "education": education,
-                    "experience": experience if experience else "No experience listed",
-                    "skills": format_skills(skills),
-                    "projects": projects if projects else "No projects listed",
-                    "certifications": certifications if certifications else "No certifications listed"
-                }
-                
-                pdf_filename = f"{full_name.replace(' ', '_')}_Resume.pdf"
-                pdf_path = generate_pdf_resume(user_data, pdf_filename, template_num, photo_path)
-                score, feedback = score_resume(user_data)
-                suggestions = get_keyword_suggestions(user_data["skills"])
-                
-                st.success("✅ Resume generated successfully!")
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("📊 Resume Score", f"{score}/100")
-                with col2:
-                    st.info(f"💡 {feedback}")
-                
-                if suggestions:
-                    st.write("💡 **Suggested skills to add:**", ", ".join(suggestions))
-                
-                with open(pdf_path, "rb") as f:
-                    st.download_button("📥 Download PDF", f, file_name=pdf_filename, mime="application/pdf")
-                
-                # Clean up
-                try:
-                    if os.path.exists(pdf_path):
-                        os.remove(pdf_path)
-                    if photo_path and os.path.exists(photo_path):
-                        os.remove(photo_path)
-                    if os.path.exists(os.path.join("outputs", "uploaded_photo.jpg")):
-                        os.remove(os.path.join("outputs", "uploaded_photo.jpg"))
-                except:
-                    pass
-                
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                img = Image.open(self.photo_path)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                temp_path = 'outputs/temp_photo.jpg'
+                img.save(temp_path, 'JPEG', quality=85)
+                self.image(temp_path, 160, 8, 35, 35)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return True
+            except:
+                return False
+        return False
+    
+    def add_section(self, title, content):
+        self.set_font("Arial", "B", 12)
+        self.set_text_color(30, 30, 30)
+        self.cell(0, 8, title, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(2)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(50, 50, 50)
+        self.multi_cell(0, 5, content)
+        self.ln(4)
+    
+    def add_skills(self, skills):
+        self.set_font("Arial", "B", 12)
+        self.set_text_color(30, 30, 30)
+        self.cell(0, 8, "SKILLS", 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(2)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(50, 50, 50)
+        skills_text = ", ".join(skills)
+        self.multi_cell(0, 5, skills_text)
+        self.ln(4)
 
-st.sidebar.markdown("""
-    ### 💡 Tips
-    - Choose a template that fits your style
-    - Use action words (Developed, Created, Led)
-    - Quantify achievements with numbers
-    - List 5-10 relevant skills
-    - Upload a photo and use the slider to center your face
-""")
+
+# ============================================
+# TEMPLATE 1: CLASSIC BLUE
+# ============================================
+class TemplateClassic(BaseResume):
+    def header(self):
+        self.set_fill_color(25, 50, 100)
+        self.rect(0, 0, 210, 55, "F")
+        self.set_y(10)
+        self.add_photo_top_right()
+        self.set_x(15)
+        self.set_font("Arial", "B", 18)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 12, self.name, 0, 1, "L")
+        self.set_x(15)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(200, 210, 230)
+        self.cell(0, 6, self.contact, 0, 1, "L")
+        self.ln(10)
+    
+    def add_sections(self, user_data):
+        self.add_section("EDUCATION", user_data["education"])
+        self.add_skills(user_data["skills"])
+        if user_data["experience"] and user_data["experience"] != "No experience listed":
+            self.add_section("EXPERIENCE", user_data["experience"])
+        if user_data["projects"] and user_data["projects"] != "No projects listed":
+            self.add_section("PROJECTS", user_data["projects"])
+        if user_data["certifications"] and user_data["certifications"] != "No certifications listed":
+            self.add_section("CERTIFICATIONS", user_data["certifications"])
+
+
+# ============================================
+# TEMPLATE 2: MODERN GREEN
+# ============================================
+class TemplateModern(BaseResume):
+    def header(self):
+        self.set_fill_color(0, 150, 100)
+        self.rect(0, 0, 8, 297, "F")
+        self.set_y(15)
+        self.add_photo_top_right()
+        self.set_x(20)
+        self.set_font("Arial", "B", 22)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 12, self.name, 0, 1, "L")
+        self.set_x(20)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(80, 80, 80)
+        self.cell(0, 6, self.contact, 0, 1, "L")
+        self.set_draw_color(0, 150, 100)
+        self.line(15, 55, 195, 55)
+        self.ln(12)
+    
+    def add_section(self, title, content):
+        self.set_font("Arial", "B", 11)
+        self.set_text_color(0, 150, 100)
+        self.cell(0, 8, title, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(2)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(50, 50, 50)
+        self.multi_cell(0, 5, content)
+        self.ln(4)
+    
+    def add_sections(self, user_data):
+        self.add_section("EDUCATION", user_data["education"])
+        self.add_skills(user_data["skills"])
+        if user_data["experience"] and user_data["experience"] != "No experience listed":
+            self.add_section("EXPERIENCE", user_data["experience"])
+        if user_data["projects"] and user_data["projects"] != "No projects listed":
+            self.add_section("PROJECTS", user_data["projects"])
+        if user_data["certifications"] and user_data["certifications"] != "No certifications listed":
+            self.add_section("CERTIFICATIONS", user_data["certifications"])
+
+
+# ============================================
+# TEMPLATE 3: MINIMAL DARK
+# ============================================
+class TemplateMinimal(BaseResume):
+    def header(self):
+        self.set_y(15)
+        self.add_photo_top_right()
+        self.set_x(15)
+        self.set_font("Arial", "B", 24)
+        self.set_text_color(30, 30, 30)
+        self.cell(0, 12, self.name, 0, 1, "L")
+        self.set_x(15)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 6, self.contact, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, 55, 195, 55)
+        self.ln(12)
+    
+    def add_section(self, title, content):
+        self.set_font("Arial", "B", 11)
+        self.set_text_color(40, 40, 60)
+        self.cell(0, 8, title, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(2)
+        self.set_font("Arial", "", 10)
+        self.set_text_color(50, 50, 50)
+        self.multi_cell(0, 5, content)
+        self.ln(4)
+    
+    def add_sections(self, user_data):
+        self.add_section("EDUCATION", user_data["education"])
+        self.add_skills(user_data["skills"])
+        if user_data["experience"] and user_data["experience"] != "No experience listed":
+            self.add_section("EXPERIENCE", user_data["experience"])
+        if user_data["projects"] and user_data["projects"] != "No projects listed":
+            self.add_section("PROJECTS", user_data["projects"])
+        if user_data["certifications"] and user_data["certifications"] != "No certifications listed":
+            self.add_section("CERTIFICATIONS", user_data["certifications"])
+
+
+# ============================================
+# TEMPLATE 4: ELEGANT GOLD
+# ============================================
+class TemplateGold(BaseResume):
+    def header(self):
+        self.set_draw_color(200, 170, 110)
+        self.set_line_width(1.5)
+        self.rect(10, 10, 190, 277)
+        self.set_line_width(0.5)
+        self.set_fill_color(200, 170, 110)
+        self.rect(10, 10, 190, 16, "F")
+        self.set_y(14)
+        self.add_photo_top_right()
+        self.set_x(18)
+        self.set_font("Times", "B", 14)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 8, self.name, 0, 1, "L")
+        self.set_x(18)
+        self.set_font("Times", "", 9)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 5, self.contact, 0, 1, "L")
+        self.set_y(42)
+    
+    def add_section(self, title, content):
+        self.set_font("Times", "B", 11)
+        self.set_text_color(200, 170, 110)
+        self.cell(0, 8, title, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, self.get_y(), 195, self.get_y())
+        self.ln(2)
+        self.set_font("Times", "", 10)
+        self.set_text_color(50, 50, 50)
+        self.multi_cell(0, 5, content)
+        self.ln(4)
+    
+    def add_sections(self, user_data):
+        self.add_section("EDUCATION", user_data["education"])
+        self.add_skills(user_data["skills"])
+        if user_data["experience"] and user_data["experience"] != "No experience listed":
+            self.add_section("EXPERIENCE", user_data["experience"])
+        if user_data["projects"] and user_data["projects"] != "No projects listed":
+            self.add_section("PROJECTS", user_data["projects"])
+        if user_data["certifications"] and user_data["certifications"] != "No certifications listed":
+            self.add_section("CERTIFICATIONS", user_data["certifications"])
+
+
+# ============================================
+# TEMPLATE 5: PROFESSIONAL GRID
+# ============================================
+class TemplateGrid(BaseResume):
+    def header(self):
+        self.set_fill_color(240, 240, 240)
+        self.rect(0, 0, 210, 45, "F")
+        self.set_y(8)
+        self.add_photo_top_right()
+        self.set_x(15)
+        self.set_font("Arial", "B", 16)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 12, self.name, 0, 1, "L")
+        self.set_x(15)
+        self.set_font("Arial", "", 9)
+        self.set_text_color(80, 80, 80)
+        self.cell(0, 6, self.contact, 0, 1, "L")
+        self.set_draw_color(200, 200, 200)
+        self.line(15, 48, 195, 48)
+        self.ln(10)
+    
+    def add_section(self, title, content):
+        self.set_fill_color(245, 245, 245)
+        self.set_draw_color(200, 200, 200)
+        line_count = len(content.split("\n")) + 2
+        height = 10 + line_count * 5
+        self.rect(15, self.get_y(), 180, height, "DF")
+        self.set_y(self.get_y()+3)
+        self.set_x(20)
+        self.set_font("Arial", "B", 10)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 6, title, 0, 1, "L")
+        self.set_font("Arial", "", 9)
+        self.set_text_color(60, 60, 60)
+        self.set_x(20)
+        self.multi_cell(170, 5, content)
+        self.set_y(self.get_y()+5)
+    
+    def add_skills(self, skills):
+        content = ", ".join(skills)
+        self.set_fill_color(245, 245, 245)
+        self.set_draw_color(200, 200, 200)
+        line_count = len(content.split("\n")) + 2
+        height = 10 + line_count * 5
+        self.rect(15, self.get_y(), 180, height, "DF")
+        self.set_y(self.get_y()+3)
+        self.set_x(20)
+        self.set_font("Arial", "B", 10)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 6, "SKILLS", 0, 1, "L")
+        self.set_font("Arial", "", 9)
+        self.set_text_color(60, 60, 60)
+        self.set_x(20)
+        self.multi_cell(170, 5, content)
+        self.set_y(self.get_y()+5)
+    
+    def add_sections(self, user_data):
+        self.add_section("EDUCATION", user_data["education"])
+        self.add_skills(user_data["skills"])
+        if user_data["experience"] and user_data["experience"] != "No experience listed":
+            self.add_section("EXPERIENCE", user_data["experience"])
+        if user_data["projects"] and user_data["projects"] != "No projects listed":
+            self.add_section("PROJECTS", user_data["projects"])
+        if user_data["certifications"] and user_data["certifications"] != "No certifications listed":
+            self.add_section("CERTIFICATIONS", user_data["certifications"])
+
+
+# ============================================
+# MAIN GENERATION FUNCTION
+# ============================================
+def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
+    os.makedirs("outputs", exist_ok=True)
+    pdf_path = os.path.join("outputs", filename)
+    
+    if template == "2":
+        pdf = TemplateModern()
+    elif template == "3":
+        pdf = TemplateMinimal()
+    elif template == "4":
+        pdf = TemplateGold()
+    elif template == "5":
+        pdf = TemplateGrid()
+    else:
+        pdf = TemplateClassic()
+    
+    if photo_path and os.path.exists(photo_path):
+        pdf.set_photo(photo_path, size=35)
+    
+    pdf.name = user_data["full_name"].upper()
+    contact = f"{user_data['email']} | {user_data['phone']}"
+    if user_data.get('location'):
+        contact += f" | {user_data['location']}"
+    pdf.contact = contact
+    
+    pdf.add_page()
+    pdf.add_sections(user_data)
+    
+    pdf.set_y(-20)
+    pdf.set_font("Arial", "I", 8)
+    pdf.set_text_color(150, 150, 150)
+    pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%B %d, %Y')}", 0, 0, "C")
+    
+    pdf.output(pdf_path)
+    return pdf_path
