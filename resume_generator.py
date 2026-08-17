@@ -18,22 +18,20 @@ class BaseResume(FPDF):
         self.photo_size = size
     
     def add_photo_top_right(self):
-        """Add photo at top right corner - clean placement"""
-        if self.photo_path and os.path.exists(self.photo_path):
-            try:
-                img = Image.open(self.photo_path)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                temp_path = 'outputs/temp_photo.jpg'
-                img.save(temp_path, 'JPEG', quality=85)
-                # Place at top right (x=165, y=10)
-                self.image(temp_path, 165, 10, 32, 32)
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                return True
-            except:
-                return False
-        return False
+    if self.photo_path and os.path.exists(self.photo_path):
+        try:
+            img = Image.open(self.photo_path)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            temp_path = 'outputs/temp_photo.jpg'
+            img.save(temp_path, 'JPEG', quality=85)
+            self.image(temp_path, 160, 8, 35, 35)  # Moved slightly right and down
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return True
+        except:
+            return False
+    return False
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 12)
