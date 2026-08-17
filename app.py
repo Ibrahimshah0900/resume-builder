@@ -3,6 +3,9 @@ import os
 from resume_generator import generate_pdf_resume
 from resume_scorer import score_resume, get_keyword_suggestions
 from utils import validate_email, validate_phone, format_skills
+from PIL import Image
+import cv2
+import numpy as np
 
 st.set_page_config(page_title="AI Resume Builder", page_icon="📄", layout="wide")
 
@@ -20,6 +23,34 @@ st.markdown("""
 
 st.markdown('<p class="main-header">📄 AI Resume Builder</p>', unsafe_allow_html=True)
 st.markdown("Choose a template and fill in your details to generate a professional resume!")
+
+def detect_face_and_crop(image_path):
+    """Detect face and crop image around it"""
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+        
+        if len(faces) == 0:
+            return None
+        
+        (x, y, w, h) = max(faces, key=lambda f: f[2] * f[3])
+        padding = max(w, h) // 2
+        x1 = max(0, x - padding)
+        y1 = max(0, y - padding)
+        x2 = min(img.shape[1], x + w + padding)
+        y2 = min(img.shape[0], y + h + padding)
+        cropped = img[y1:y2, x1:x2]
+        cropped_pil = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
+        return cropped_pil
+    except:
+        return None
 
 with st.form("resume_form"):
     st.header("🎨 Choose Resume Template")
@@ -77,13 +108,14 @@ with st.form("resume_form"):
     certifications = st.text_area("Certifications", height=80)
     
     # ============================================
-    # PHOTO UPLOAD & CROP SECTION
+    # PHOTO UPLOAD with FACE DETECTION
     # ============================================
     st.header("📸 Profile Photo (Optional)")
+    st.markdown("*Photo will be automatically cropped around your face*")
+    
     uploaded_file = st.file_uploader(
         "Upload your photo (JPG/PNG)",
-        type=["jpg", "jpeg", "png"],
-        help="Upload a professional photo for your resume"
+        type=["jpg", "jpeg", "png"]
     )
     
     photo_path = None
@@ -93,47 +125,34 @@ with st.form("resume_form"):
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
-        st.image(temp_path, width=150, caption="Original Photo")
-        
-        st.write("**Crop your photo:**")
-        col1, col2, col3, col4 = st.columns(4)
-        
+        col1, col2 = st.columns(2)
         with col1:
-            crop_top = st.slider("Top", 0, 50, 0, key="crop_top")
-        with col2:
-            crop_bottom = st.slider("Bottom", 0, 50, 0, key="crop_bottom")
-        with col3:
-            crop_left = st.slider("Left", 0, 50, 0, key="crop_left")
-        with col4:
-            crop_right = st.slider("Right", 0, 50, 0, key="crop_right")
+            st.image(temp_path, width=200, caption="Original Photo")
         
-        if crop_top > 0 or crop_bottom > 0 or crop_left > 0 or crop_right > 0:
-            try:
-                from PIL import Image
+        with st.spinner("🔄 Detecting face..."):
+            cropped_img = detect_face_and_crop(temp_path)
+            
+            if cropped_img is not None:
+                cropped_path = os.path.join("outputs", "cropped_photo.jpg")
+                cropped_img.save(cropped_path, "JPEG", quality=90)
+                photo_path = cropped_path
+                with col2:
+                    st.image(cropped_path, width=200, caption="✅ Cropped (Face detected)")
+                st.success("✅ Face detected and cropped!")
+            else:
+                # Fallback: center crop
                 img = Image.open(temp_path)
                 width, height = img.size
-                
-                left = int(width * crop_left / 100)
-                right = int(width * (100 - crop_right) / 100)
-                top = int(height * crop_top / 100)
-                bottom = int(height * (100 - crop_bottom) / 100)
-                
-                if right > left and bottom > top:
-                    cropped = img.crop((left, top, right, bottom))
-                    cropped_path = os.path.join("outputs", "cropped_photo.jpg")
-                    cropped.save(cropped_path, "JPEG", quality=90)
-                    photo_path = cropped_path
-                    st.image(cropped_path, width=150, caption="Cropped Photo")
-                    st.success("✅ Photo cropped successfully!")
-                else:
-                    photo_path = temp_path
-                    st.warning("⚠️ Invalid crop values, using original photo")
-            except Exception as e:
-                st.error(f"Error cropping photo: {e}")
-                photo_path = temp_path
-        else:
-            photo_path = temp_path
-            st.success("✅ Photo uploaded successfully!")
+                min_side = min(width, height)
+                left = (width - min_side) // 2
+                top = (height - min_side) // 2
+                cropped = img.crop((left, top, left + min_side, top + min_side))
+                cropped_path = os.path.join("outputs", "cropped_photo.jpg")
+                cropped.save(cropped_path, "JPEG", quality=90)
+                photo_path = cropped_path
+                with col2:
+                    st.image(cropped_path, width=200, caption="⚠️ Center Cropped")
+                st.warning("⚠️ No face detected. Photo cropped from center.")
     
     submitted = st.form_submit_button("✨ Generate Resume")
 
@@ -179,14 +198,15 @@ if submitted:
                     st.download_button("📥 Download PDF", f, file_name=pdf_filename, mime="application/pdf")
                 
                 # Clean up
-                if os.path.exists(pdf_path):
-                    os.remove(pdf_path)
-                if photo_path and os.path.exists(photo_path):
-                    os.remove(photo_path)
-                if os.path.exists(os.path.join("outputs", "uploaded_photo.jpg")):
-                    os.remove(os.path.join("outputs", "uploaded_photo.jpg"))
-                if os.path.exists(os.path.join("outputs", "cropped_photo.jpg")):
-                    os.remove(os.path.join("outputs", "cropped_photo.jpg"))
+                try:
+                    if os.path.exists(pdf_path):
+                        os.remove(pdf_path)
+                    if photo_path and os.path.exists(photo_path):
+                        os.remove(photo_path)
+                    if os.path.exists(os.path.join("outputs", "uploaded_photo.jpg")):
+                        os.remove(os.path.join("outputs", "uploaded_photo.jpg"))
+                except:
+                    pass
                 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
@@ -197,5 +217,5 @@ st.sidebar.markdown("""
     - Use action words (Developed, Created, Led)
     - Quantify achievements with numbers
     - List 5-10 relevant skills
-    - Upload a professional photo for a complete resume
+    - Upload a photo for a professional look (face auto-detected)
 """)
