@@ -26,7 +26,6 @@ class BaseResume(FPDF):
                     img = img.convert('RGB')
                 temp_path = 'outputs/temp_photo.jpg'
                 img.save(temp_path, 'JPEG', quality=85)
-                # Photo at TOP RIGHT, completely outside text area
                 self.image(temp_path, 165, 8, 32, 32)
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
@@ -62,13 +61,14 @@ class BaseResume(FPDF):
 
 
 # ============================================
-# TEMPLATE 1: CLASSIC BLUE
+# TEMPLATE 1: CLASSIC BLUE - FIXED
 # ============================================
 class TemplateClassic(BaseResume):
     def header(self):
+        # Dark blue header bar - increased height to 65
         self.set_fill_color(25, 50, 100)
-        self.rect(0, 0, 210, 55, "F")
-        self.set_y(10)
+        self.rect(0, 0, 210, 65, "F")
+        self.set_y(12)
         self.add_photo_top_right()
         self.set_x(15)
         self.set_font("Arial", "B", 18)
@@ -78,7 +78,8 @@ class TemplateClassic(BaseResume):
         self.set_font("Arial", "", 10)
         self.set_text_color(200, 210, 230)
         self.cell(0, 6, self.contact, 0, 1, "L")
-        self.ln(10)
+        # Set Y position to 70 - well below the header
+        self.set_y(70)
     
     def add_sections(self, user_data):
         self.add_section("EDUCATION", user_data["education"])
@@ -92,7 +93,7 @@ class TemplateClassic(BaseResume):
 
 
 # ============================================
-# TEMPLATE 2: MODERN GREEN
+# TEMPLATE 2: MODERN GREEN - FIXED
 # ============================================
 class TemplateModern(BaseResume):
     def header(self):
@@ -110,7 +111,8 @@ class TemplateModern(BaseResume):
         self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(0, 150, 100)
         self.line(15, 55, 195, 55)
-        self.ln(12)
+        # Set Y position to 65 - well below header
+        self.set_y(65)
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 11)
@@ -136,7 +138,7 @@ class TemplateModern(BaseResume):
 
 
 # ============================================
-# TEMPLATE 3: MINIMAL DARK
+# TEMPLATE 3: MINIMAL DARK - FIXED
 # ============================================
 class TemplateMinimal(BaseResume):
     def header(self):
@@ -152,7 +154,8 @@ class TemplateMinimal(BaseResume):
         self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(200, 200, 200)
         self.line(15, 55, 195, 55)
-        self.ln(12)
+        # Set Y position to 65 - well below header
+        self.set_y(65)
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 11)
@@ -178,7 +181,7 @@ class TemplateMinimal(BaseResume):
 
 
 # ============================================
-# TEMPLATE 4: ELEGANT GOLD
+# TEMPLATE 4: ELEGANT GOLD - FIXED
 # ============================================
 class TemplateGold(BaseResume):
     def header(self):
@@ -198,7 +201,8 @@ class TemplateGold(BaseResume):
         self.set_font("Times", "", 9)
         self.set_text_color(255, 255, 255)
         self.cell(0, 5, self.contact, 0, 1, "L")
-        self.set_y(42)
+        # Set Y position to 45 - well below the gold header
+        self.set_y(45)
     
     def add_section(self, title, content):
         self.set_font("Times", "B", 11)
@@ -224,13 +228,13 @@ class TemplateGold(BaseResume):
 
 
 # ============================================
-# TEMPLATE 5: PROFESSIONAL GRID
+# TEMPLATE 5: PROFESSIONAL GRID - FIXED
 # ============================================
 class TemplateGrid(BaseResume):
     def header(self):
         self.set_fill_color(240, 240, 240)
-        self.rect(0, 0, 210, 45, "F")
-        self.set_y(8)
+        self.rect(0, 0, 210, 50, "F")
+        self.set_y(10)
         self.add_photo_top_right()
         self.set_x(15)
         self.set_font("Arial", "B", 16)
@@ -241,8 +245,9 @@ class TemplateGrid(BaseResume):
         self.set_text_color(80, 80, 80)
         self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(200, 200, 200)
-        self.line(15, 48, 195, 48)
-        self.ln(10)
+        self.line(15, 52, 195, 52)
+        # Set Y position to 58 - well below header
+        self.set_y(58)
     
     def add_section(self, title, content):
         self.set_fill_color(245, 245, 245)
