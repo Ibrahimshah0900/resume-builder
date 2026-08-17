@@ -24,8 +24,8 @@ st.markdown("""
 st.markdown('<p class="main-header">📄 AI Resume Builder</p>', unsafe_allow_html=True)
 st.markdown("Choose a template and fill in your details to generate a professional resume!")
 
-def detect_face_and_crop(image_path):
-    """Detect face and crop image around it"""
+def detect_face_and_crop(image_path, crop_percent=0):
+    """Detect face with optional manual crop offset"""
     try:
         img = cv2.imread(image_path)
         if img is None:
@@ -41,11 +41,14 @@ def detect_face_and_crop(image_path):
             return None
         
         (x, y, w, h) = max(faces, key=lambda f: f[2] * f[3])
+        
+        # Apply manual crop adjustment
         padding = max(w, h) // 2
         x1 = max(0, x - padding)
-        y1 = max(0, y - padding)
+        y1 = max(0, y - padding - int(crop_percent * 0.5))
         x2 = min(img.shape[1], x + w + padding)
         y2 = min(img.shape[0], y + h + padding)
+        
         cropped = img[y1:y2, x1:x2]
         cropped_pil = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
         return cropped_pil
@@ -58,26 +61,26 @@ with st.form("resume_form"):
     template_choice = st.radio(
         "Select Template Style:",
         [
-            "1 - Classic Blue (Two-Column)",
-            "2 - Modern Green (Accent Bar)",
-            "3 - Minimal Dark (Clean)",
-            "4 - Elegant Gold (Premium)",
-            "5 - Professional Grid (Boxed)"
+            "1 - Classic Blue",
+            "2 - Modern Green",
+            "3 - Minimal Dark",
+            "4 - Elegant Gold",
+            "5 - Professional Grid"
         ],
         index=0,
         horizontal=True
     )
     
     if template_choice.startswith("1"):
-        st.info("📘 **Classic Blue** – Two‑column layout with a professional sidebar.")
+        st.info("📘 **Classic Blue** – Professional two-column layout")
     elif template_choice.startswith("2"):
-        st.info("💚 **Modern Green** – Clean design with a left accent color bar.")
+        st.info("💚 **Modern Green** – Clean design with accent bar")
     elif template_choice.startswith("3"):
-        st.info("⬛ **Minimal Dark** – Bold minimalist typography with a dark header.")
+        st.info("⬛ **Minimal Dark** – Bold minimalist design")
     elif template_choice.startswith("4"):
-        st.info("🌟 **Elegant Gold** – Premium gold accents and serif fonts for a luxury feel.")
+        st.info("🌟 **Elegant Gold** – Premium gold accents")
     elif template_choice.startswith("5"):
-        st.info("📦 **Professional Grid** – Boxed sections with a clean, structured layout.")
+        st.info("📦 **Professional Grid** – Boxed sections layout")
     
     st.markdown("---")
     
@@ -108,10 +111,10 @@ with st.form("resume_form"):
     certifications = st.text_area("Certifications", height=80)
     
     # ============================================
-    # PHOTO UPLOAD with FACE DETECTION
+    # SIMPLE PHOTO UPLOAD WITH CROP SLIDER
     # ============================================
-    st.header("📸 Profile Photo (Optional)")
-    st.markdown("*Photo will be automatically cropped around your face*")
+    st.header("📸 Profile Photo")
+    st.markdown("Upload a photo. Use the slider to crop around your face.")
     
     uploaded_file = st.file_uploader(
         "Upload your photo (JPG/PNG)",
@@ -119,40 +122,55 @@ with st.form("resume_form"):
     )
     
     photo_path = None
+    crop_adjust = 0
+    
     if uploaded_file is not None:
         os.makedirs("outputs", exist_ok=True)
         temp_path = os.path.join("outputs", "uploaded_photo.jpg")
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
-        col1, col2 = st.columns(2)
+        # Preview original
+        col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(temp_path, width=200, caption="Original Photo")
+            st.image(temp_path, width=150, caption="Original")
         
-        with st.spinner("🔄 Detecting face..."):
-            cropped_img = detect_face_and_crop(temp_path)
+        with col2:
+            # Simple crop slider
+            crop_adjust = st.slider(
+                "Crop adjustment (move up/down to center face)",
+                min_value=-50,
+                max_value=50,
+                value=0,
+                step=5,
+                help="Move slider to center your face in the frame"
+            )
+        
+        # Auto crop with face detection
+        with st.spinner("🔄 Processing photo..."):
+            cropped_img = detect_face_and_crop(temp_path, crop_adjust)
             
             if cropped_img is not None:
                 cropped_path = os.path.join("outputs", "cropped_photo.jpg")
                 cropped_img.save(cropped_path, "JPEG", quality=90)
                 photo_path = cropped_path
-                with col2:
-                    st.image(cropped_path, width=200, caption="✅ Cropped (Face detected)")
-                st.success("✅ Face detected and cropped!")
+                st.image(cropped_path, width=150, caption="✅ Cropped (Face detected)")
+                st.success("✅ Photo ready! Face detected and cropped.")
             else:
                 # Fallback: center crop
                 img = Image.open(temp_path)
                 width, height = img.size
                 min_side = min(width, height)
                 left = (width - min_side) // 2
-                top = (height - min_side) // 2
-                cropped = img.crop((left, top, left + min_side, top + min_side))
+                top = (height - min_side) // 2 + crop_adjust
+                top = max(0, top)
+                bottom = top + min_side
+                cropped = img.crop((left, top, left + min_side, bottom))
                 cropped_path = os.path.join("outputs", "cropped_photo.jpg")
                 cropped.save(cropped_path, "JPEG", quality=90)
                 photo_path = cropped_path
-                with col2:
-                    st.image(cropped_path, width=200, caption="⚠️ Center Cropped")
-                st.warning("⚠️ No face detected. Photo cropped from center.")
+                st.image(cropped_path, width=150, caption="⚠️ Center Cropped")
+                st.warning("⚠️ No face detected. Cropped from center. Try a clearer photo or adjust slider.")
     
     submitted = st.form_submit_button("✨ Generate Resume")
 
@@ -217,5 +235,5 @@ st.sidebar.markdown("""
     - Use action words (Developed, Created, Led)
     - Quantify achievements with numbers
     - List 5-10 relevant skills
-    - Upload a photo for a professional look (face auto-detected)
+    - Upload a photo and use slider to center your face
 """)
