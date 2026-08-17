@@ -1,12 +1,36 @@
 from fpdf import FPDF
 import os
 from datetime import datetime
+from PIL import Image
+import io
 
-# Base class with common methods
+# ============================================
+# BASE CLASS with PHOTO SUPPORT
+# ============================================
 class BaseResume(FPDF):
     def __init__(self):
         super().__init__()
         self.set_auto_page_break(auto=True, margin=15)
+        self.photo_path = None
+    
+    def set_photo(self, photo_path):
+        self.photo_path = photo_path
+    
+    def add_photo(self, x, y, size=30):
+        if self.photo_path and os.path.exists(self.photo_path):
+            try:
+                img = Image.open(self.photo_path)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                temp_path = 'outputs/temp_photo.jpg'
+                img.save(temp_path, 'JPEG', quality=85)
+                self.image(temp_path, x, y, size, size)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return True
+            except:
+                return False
+        return False
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 12)
@@ -34,19 +58,33 @@ class BaseResume(FPDF):
         self.ln(4)
 
 
-# Template 1: Classic Blue (single-column)
+# ============================================
+# TEMPLATE 1: CLASSIC BLUE
+# ============================================
 class TemplateClassic(BaseResume):
     def header(self):
         self.set_fill_color(25, 50, 100)
-        self.rect(0, 0, 210, 35, "F")
-        self.set_y(8)
+        self.rect(0, 0, 210, 48, "F")
+        self.set_y(6)
+        
+        if self.photo_path:
+            self.add_photo(12, 6, 36)
+            self.set_x(55)
+        else:
+            self.set_x(10)
+        
         self.set_font("Arial", "B", 18)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 10, self.name, 0, 1, "C")
+        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        
         self.set_font("Arial", "", 10)
         self.set_text_color(200, 210, 230)
-        self.cell(0, 6, self.contact, 0, 1, "C")
-        self.ln(10)
+        if self.photo_path:
+            self.set_x(55)
+        else:
+            self.set_x(10)
+        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
+        self.ln(12)
     
     def add_sections(self, user_data):
         self.add_section("EDUCATION", user_data["education"])
@@ -59,23 +97,35 @@ class TemplateClassic(BaseResume):
             self.add_section("CERTIFICATIONS", user_data["certifications"])
 
 
-# Template 2: Modern Green (single-column, green accents)
+# ============================================
+# TEMPLATE 2: MODERN GREEN
+# ============================================
 class TemplateModern(BaseResume):
     def header(self):
         self.set_fill_color(0, 150, 100)
         self.rect(0, 0, 8, 297, "F")
-        self.set_y(20)
-        self.set_x(15)
+        self.set_y(18)
+        
+        if self.photo_path:
+            self.add_photo(20, 15, 32)
+            self.set_x(60)
+        else:
+            self.set_x(15)
+        
         self.set_font("Arial", "B", 22)
         self.set_text_color(0, 0, 0)
-        self.cell(0, 12, self.name, 0, 1, "L")
-        self.set_x(15)
+        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "L")
+        
         self.set_font("Arial", "", 10)
         self.set_text_color(80, 80, 80)
-        self.cell(0, 6, self.contact, 0, 1, "L")
+        if self.photo_path:
+            self.set_x(60)
+        else:
+            self.set_x(15)
+        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "L")
         self.set_draw_color(0, 150, 100)
-        self.line(15, 50, 195, 50)
-        self.ln(10)
+        self.line(15, 52, 195, 52)
+        self.ln(12)
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 11)
@@ -100,19 +150,33 @@ class TemplateModern(BaseResume):
             self.add_section("CERTIFICATIONS", user_data["certifications"])
 
 
-# Template 3: Minimal Dark (single-column, dark header)
+# ============================================
+# TEMPLATE 3: MINIMAL DARK
+# ============================================
 class TemplateMinimal(BaseResume):
     def header(self):
-        self.set_y(20)
+        self.set_y(18)
+        
+        if self.photo_path:
+            self.add_photo(15, 15, 32)
+            self.set_x(55)
+        else:
+            self.set_x(10)
+        
         self.set_font("Arial", "B", 24)
         self.set_text_color(30, 30, 30)
-        self.cell(0, 12, self.name, 0, 1, "C")
+        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        
         self.set_font("Arial", "", 10)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 6, self.contact, 0, 1, "C")
+        if self.photo_path:
+            self.set_x(55)
+        else:
+            self.set_x(10)
+        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
         self.set_draw_color(200, 200, 200)
-        self.line(40, 50, 170, 50)
-        self.ln(10)
+        self.line(40, 52, 170, 52)
+        self.ln(12)
     
     def add_section(self, title, content):
         self.set_font("Arial", "B", 11)
@@ -137,7 +201,9 @@ class TemplateMinimal(BaseResume):
             self.add_section("CERTIFICATIONS", user_data["certifications"])
 
 
-# Template 4: Elegant Gold (single-column, gold accents, Times font)
+# ============================================
+# TEMPLATE 4: ELEGANT GOLD
+# ============================================
 class TemplateGold(BaseResume):
     def header(self):
         self.set_draw_color(200, 170, 110)
@@ -145,15 +211,27 @@ class TemplateGold(BaseResume):
         self.rect(10, 10, 190, 277)
         self.set_line_width(0.5)
         self.set_fill_color(200, 170, 110)
-        self.rect(10, 10, 190, 12, "F")
-        self.set_y(16)
+        self.rect(10, 10, 190, 16, "F")
+        self.set_y(14)
+        
+        if self.photo_path:
+            self.add_photo(18, 20, 30)
+            self.set_x(55)
+        else:
+            self.set_x(15)
+        
         self.set_font("Times", "B", 14)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 6, self.name, 0, 1, "C")
+        self.cell(0, 8, self.name, 0, 1, "L" if self.photo_path else "C")
+        
         self.set_font("Times", "", 9)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 5, self.contact, 0, 1, "C")
-        self.set_y(35)
+        if self.photo_path:
+            self.set_x(55)
+        else:
+            self.set_x(15)
+        self.cell(0, 5, self.contact, 0, 1, "L" if self.photo_path else "C")
+        self.set_y(40)
     
     def add_section(self, title, content):
         self.set_font("Times", "B", 11)
@@ -167,19 +245,6 @@ class TemplateGold(BaseResume):
         self.multi_cell(0, 5, content)
         self.ln(4)
     
-    def add_skills(self, skills):
-        self.set_font("Times", "B", 11)
-        self.set_text_color(200, 170, 110)
-        self.cell(0, 8, "SKILLS", 0, 1, "L")
-        self.set_draw_color(200, 200, 200)
-        self.line(15, self.get_y(), 195, self.get_y())
-        self.ln(2)
-        self.set_font("Times", "", 10)
-        self.set_text_color(50, 50, 50)
-        skills_text = ", ".join(skills)
-        self.multi_cell(0, 5, skills_text)
-        self.ln(4)
-    
     def add_sections(self, user_data):
         self.add_section("EDUCATION", user_data["education"])
         self.add_skills(user_data["skills"])
@@ -191,26 +256,42 @@ class TemplateGold(BaseResume):
             self.add_section("CERTIFICATIONS", user_data["certifications"])
 
 
-# Template 5: Professional Grid (single-column, boxed sections)
+# ============================================
+# TEMPLATE 5: PROFESSIONAL GRID
+# ============================================
 class TemplateGrid(BaseResume):
     def header(self):
         self.set_fill_color(240, 240, 240)
-        self.rect(0, 0, 210, 30, "F")
-        self.set_y(8)
+        self.rect(0, 0, 210, 38, "F")
+        self.set_y(6)
+        
+        if self.photo_path:
+            self.add_photo(12, 5, 32)
+            self.set_x(52)
+        else:
+            self.set_x(10)
+        
         self.set_font("Arial", "B", 16)
         self.set_text_color(0, 0, 0)
-        self.cell(0, 10, self.name, 0, 1, "C")
+        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        
         self.set_font("Arial", "", 9)
         self.set_text_color(80, 80, 80)
-        self.cell(0, 6, self.contact, 0, 1, "C")
+        if self.photo_path:
+            self.set_x(52)
+        else:
+            self.set_x(10)
+        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
         self.set_draw_color(200, 200, 200)
-        self.line(15, 30, 195, 30)
-        self.ln(8)
+        self.line(15, 40, 195, 40)
+        self.ln(10)
     
     def add_section(self, title, content):
         self.set_fill_color(245, 245, 245)
         self.set_draw_color(200, 200, 200)
-        self.rect(15, self.get_y(), 180, 10 + len(content.split("\n"))*5, "DF")
+        line_count = len(content.split("\n")) + 2
+        height = 10 + line_count * 5
+        self.rect(15, self.get_y(), 180, height, "DF")
         self.set_y(self.get_y()+3)
         self.set_x(20)
         self.set_font("Arial", "B", 10)
@@ -223,10 +304,12 @@ class TemplateGrid(BaseResume):
         self.set_y(self.get_y()+5)
     
     def add_skills(self, skills):
+        content = ", ".join(skills)
         self.set_fill_color(245, 245, 245)
         self.set_draw_color(200, 200, 200)
-        content = ", ".join(skills)
-        self.rect(15, self.get_y(), 180, 10 + len(content.split("\n"))*5, "DF")
+        line_count = len(content.split("\n")) + 2
+        height = 10 + line_count * 5
+        self.rect(15, self.get_y(), 180, height, "DF")
         self.set_y(self.get_y()+3)
         self.set_x(20)
         self.set_font("Arial", "B", 10)
@@ -252,7 +335,7 @@ class TemplateGrid(BaseResume):
 # ============================================
 # MAIN GENERATION FUNCTION
 # ============================================
-def generate_pdf_resume(user_data, filename, template="1"):
+def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
     os.makedirs("outputs", exist_ok=True)
     pdf_path = os.path.join("outputs", filename)
     
@@ -267,6 +350,10 @@ def generate_pdf_resume(user_data, filename, template="1"):
         pdf = TemplateGrid()
     else:
         pdf = TemplateClassic()
+    
+    # Set photo if provided
+    if photo_path and os.path.exists(photo_path):
+        pdf.set_photo(photo_path)
     
     # Store name and contact
     pdf.name = user_data["full_name"].upper()
