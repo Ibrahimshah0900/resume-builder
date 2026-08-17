@@ -24,8 +24,8 @@ st.markdown("""
 st.markdown('<p class="main-header">📄 AI Resume Builder</p>', unsafe_allow_html=True)
 st.markdown("Choose a template and fill in your details to generate a professional resume!")
 
-def detect_face_and_crop(image_path, crop_percent=0):
-    """Detect face with optional manual crop offset"""
+def detect_face_and_crop(image_path, crop_adjust=0):
+    """Detect face with manual crop adjustment"""
     try:
         img = cv2.imread(image_path)
         if img is None:
@@ -42,18 +42,27 @@ def detect_face_and_crop(image_path, crop_percent=0):
         
         (x, y, w, h) = max(faces, key=lambda f: f[2] * f[3])
         
-        # Apply manual crop adjustment
         padding = max(w, h) // 2
         x1 = max(0, x - padding)
-        y1 = max(0, y - padding - int(crop_percent * 0.5))
+        y1 = max(0, y - padding + crop_adjust)
         x2 = min(img.shape[1], x + w + padding)
-        y2 = min(img.shape[0], y + h + padding)
+        y2 = min(img.shape[0], y + h + padding + crop_adjust)
         
         cropped = img[y1:y2, x1:x2]
         cropped_pil = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
         return cropped_pil
     except:
         return None
+
+def crop_center_with_adjust(img, crop_adjust=0):
+    """Center crop with vertical adjustment"""
+    width, height = img.size
+    min_side = min(width, height)
+    left = (width - min_side) // 2
+    top = (height - min_side) // 2 + crop_adjust
+    top = max(0, top)
+    bottom = top + min_side
+    return img.crop((left, top, left + min_side, bottom))
 
 with st.form("resume_form"):
     st.header("🎨 Choose Resume Template")
@@ -111,10 +120,10 @@ with st.form("resume_form"):
     certifications = st.text_area("Certifications", height=80)
     
     # ============================================
-    # SIMPLE PHOTO UPLOAD WITH CROP SLIDER
+    # REAL-TIME PHOTO CROP PREVIEW
     # ============================================
     st.header("📸 Profile Photo")
-    st.markdown("Upload a photo. Use the slider to crop around your face.")
+    st.markdown("Upload a photo. Use the slider to crop around your face (real-time preview)")
     
     uploaded_file = st.file_uploader(
         "Upload your photo (JPG/PNG)",
@@ -130,47 +139,49 @@ with st.form("resume_form"):
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
-        # Preview original
-        col1, col2 = st.columns([1, 2])
+        # Show original and slider in columns
+        col1, col2 = st.columns([1, 1])
+        
         with col1:
-            st.image(temp_path, width=150, caption="Original")
+            st.image(temp_path, width=200, caption="Original Photo")
         
         with col2:
-            # Simple crop slider
+            # Crop slider with real-time adjustment
             crop_adjust = st.slider(
-                "Crop adjustment (move up/down to center face)",
-                min_value=-50,
-                max_value=50,
+                "Move crop up/down to center face",
+                min_value=-80,
+                max_value=80,
                 value=0,
                 step=5,
-                help="Move slider to center your face in the frame"
+                help="Move slider until your face is centered"
             )
         
-        # Auto crop with face detection
-        with st.spinner("🔄 Processing photo..."):
-            cropped_img = detect_face_and_crop(temp_path, crop_adjust)
-            
-            if cropped_img is not None:
-                cropped_path = os.path.join("outputs", "cropped_photo.jpg")
-                cropped_img.save(cropped_path, "JPEG", quality=90)
-                photo_path = cropped_path
-                st.image(cropped_path, width=150, caption="✅ Cropped (Face detected)")
-                st.success("✅ Photo ready! Face detected and cropped.")
-            else:
-                # Fallback: center crop
-                img = Image.open(temp_path)
-                width, height = img.size
-                min_side = min(width, height)
-                left = (width - min_side) // 2
-                top = (height - min_side) // 2 + crop_adjust
-                top = max(0, top)
-                bottom = top + min_side
-                cropped = img.crop((left, top, left + min_side, bottom))
-                cropped_path = os.path.join("outputs", "cropped_photo.jpg")
-                cropped.save(cropped_path, "JPEG", quality=90)
-                photo_path = cropped_path
-                st.image(cropped_path, width=150, caption="⚠️ Center Cropped")
-                st.warning("⚠️ No face detected. Cropped from center. Try a clearer photo or adjust slider.")
+        # REAL-TIME PREVIEW: Show cropped image that updates with slider
+        st.write("**Real-time preview:**")
+        
+        # Detect face and crop with current slider value
+        cropped_img = detect_face_and_crop(temp_path, crop_adjust)
+        
+        if cropped_img is not None:
+            # Show real-time cropped preview
+            st.image(cropped_img, width=150, caption="✅ Live Preview (Face detected)")
+            # Save the final cropped version
+            cropped_path = os.path.join("outputs", "cropped_photo.jpg")
+            cropped_img.save(cropped_path, "JPEG", quality=90)
+            photo_path = cropped_path
+            st.success("✅ Photo ready! Face detected and cropped.")
+        else:
+            # Fallback: center crop with adjustment
+            img = Image.open(temp_path)
+            cropped = crop_center_with_adjust(img, crop_adjust)
+            st.image(cropped, width=150, caption="⚠️ Live Preview (Center cropped)")
+            cropped_path = os.path.join("outputs", "cropped_photo.jpg")
+            cropped.save(cropped_path, "JPEG", quality=90)
+            photo_path = cropped_path
+            st.warning("⚠️ No face detected. Showing center crop. Try adjusting slider.")
+        
+        # Note about real-time updates
+        st.caption("💡 Move the slider above to see the crop update in real-time")
     
     submitted = st.form_submit_button("✨ Generate Resume")
 
@@ -235,5 +246,5 @@ st.sidebar.markdown("""
     - Use action words (Developed, Created, Led)
     - Quantify achievements with numbers
     - List 5-10 relevant skills
-    - Upload a photo and use slider to center your face
+    - Upload a photo and use the slider to center your face
 """)
