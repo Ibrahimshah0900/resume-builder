@@ -2,7 +2,6 @@ from fpdf import FPDF
 import os
 from datetime import datetime
 from PIL import Image
-import io
 
 # ============================================
 # BASE CLASS with PHOTO SUPPORT
@@ -12,11 +11,14 @@ class BaseResume(FPDF):
         super().__init__()
         self.set_auto_page_break(auto=True, margin=15)
         self.photo_path = None
+        self.photo_size = 30
     
-    def set_photo(self, photo_path):
+    def set_photo(self, photo_path, size=30):
         self.photo_path = photo_path
+        self.photo_size = size
     
-    def add_photo(self, x, y, size=30):
+    def add_photo_top_right(self):
+        """Add photo at top right corner - clean placement"""
         if self.photo_path and os.path.exists(self.photo_path):
             try:
                 img = Image.open(self.photo_path)
@@ -24,7 +26,8 @@ class BaseResume(FPDF):
                     img = img.convert('RGB')
                 temp_path = 'outputs/temp_photo.jpg'
                 img.save(temp_path, 'JPEG', quality=85)
-                self.image(temp_path, x, y, size, size)
+                # Place at top right (x=165, y=10)
+                self.image(temp_path, 165, 10, 32, 32)
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                 return True
@@ -64,27 +67,24 @@ class BaseResume(FPDF):
 class TemplateClassic(BaseResume):
     def header(self):
         self.set_fill_color(25, 50, 100)
-        self.rect(0, 0, 210, 48, "F")
-        self.set_y(6)
+        self.rect(0, 0, 210, 55, "F")
+        self.set_y(10)
         
-        if self.photo_path:
-            self.add_photo(12, 6, 36)
-            self.set_x(55)
-        else:
-            self.set_x(10)
+        # Photo at TOP RIGHT (clean placement)
+        self.add_photo_top_right()
         
+        # Name - starts from left, no overlap with photo
+        self.set_x(15)
         self.set_font("Arial", "B", 18)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 12, self.name, 0, 1, "L")
         
+        # Contact - below name
+        self.set_x(15)
         self.set_font("Arial", "", 10)
         self.set_text_color(200, 210, 230)
-        if self.photo_path:
-            self.set_x(55)
-        else:
-            self.set_x(10)
-        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
-        self.ln(12)
+        self.cell(0, 6, self.contact, 0, 1, "L")
+        self.ln(10)
     
     def add_sections(self, user_data):
         self.add_section("EDUCATION", user_data["education"])
@@ -104,27 +104,22 @@ class TemplateModern(BaseResume):
     def header(self):
         self.set_fill_color(0, 150, 100)
         self.rect(0, 0, 8, 297, "F")
-        self.set_y(18)
+        self.set_y(15)
         
-        if self.photo_path:
-            self.add_photo(20, 15, 32)
-            self.set_x(60)
-        else:
-            self.set_x(15)
+        # Photo at TOP RIGHT
+        self.add_photo_top_right()
         
+        self.set_x(20)
         self.set_font("Arial", "B", 22)
         self.set_text_color(0, 0, 0)
-        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "L")
+        self.cell(0, 12, self.name, 0, 1, "L")
         
+        self.set_x(20)
         self.set_font("Arial", "", 10)
         self.set_text_color(80, 80, 80)
-        if self.photo_path:
-            self.set_x(60)
-        else:
-            self.set_x(15)
-        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "L")
+        self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(0, 150, 100)
-        self.line(15, 52, 195, 52)
+        self.line(15, 55, 195, 55)
         self.ln(12)
     
     def add_section(self, title, content):
@@ -155,27 +150,22 @@ class TemplateModern(BaseResume):
 # ============================================
 class TemplateMinimal(BaseResume):
     def header(self):
-        self.set_y(18)
+        self.set_y(15)
         
-        if self.photo_path:
-            self.add_photo(15, 15, 32)
-            self.set_x(55)
-        else:
-            self.set_x(10)
+        # Photo at TOP RIGHT
+        self.add_photo_top_right()
         
+        self.set_x(15)
         self.set_font("Arial", "B", 24)
         self.set_text_color(30, 30, 30)
-        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 12, self.name, 0, 1, "L")
         
+        self.set_x(15)
         self.set_font("Arial", "", 10)
         self.set_text_color(100, 100, 100)
-        if self.photo_path:
-            self.set_x(55)
-        else:
-            self.set_x(10)
-        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(200, 200, 200)
-        self.line(40, 52, 170, 52)
+        self.line(15, 55, 195, 55)
         self.ln(12)
     
     def add_section(self, title, content):
@@ -214,24 +204,19 @@ class TemplateGold(BaseResume):
         self.rect(10, 10, 190, 16, "F")
         self.set_y(14)
         
-        if self.photo_path:
-            self.add_photo(18, 20, 30)
-            self.set_x(55)
-        else:
-            self.set_x(15)
+        # Photo at TOP RIGHT
+        self.add_photo_top_right()
         
+        self.set_x(18)
         self.set_font("Times", "B", 14)
         self.set_text_color(255, 255, 255)
-        self.cell(0, 8, self.name, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 8, self.name, 0, 1, "L")
         
+        self.set_x(18)
         self.set_font("Times", "", 9)
         self.set_text_color(255, 255, 255)
-        if self.photo_path:
-            self.set_x(55)
-        else:
-            self.set_x(15)
-        self.cell(0, 5, self.contact, 0, 1, "L" if self.photo_path else "C")
-        self.set_y(40)
+        self.cell(0, 5, self.contact, 0, 1, "L")
+        self.set_y(42)
     
     def add_section(self, title, content):
         self.set_font("Times", "B", 11)
@@ -262,28 +247,23 @@ class TemplateGold(BaseResume):
 class TemplateGrid(BaseResume):
     def header(self):
         self.set_fill_color(240, 240, 240)
-        self.rect(0, 0, 210, 38, "F")
-        self.set_y(6)
+        self.rect(0, 0, 210, 45, "F")
+        self.set_y(8)
         
-        if self.photo_path:
-            self.add_photo(12, 5, 32)
-            self.set_x(52)
-        else:
-            self.set_x(10)
+        # Photo at TOP RIGHT
+        self.add_photo_top_right()
         
+        self.set_x(15)
         self.set_font("Arial", "B", 16)
         self.set_text_color(0, 0, 0)
-        self.cell(0, 12, self.name, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 12, self.name, 0, 1, "L")
         
+        self.set_x(15)
         self.set_font("Arial", "", 9)
         self.set_text_color(80, 80, 80)
-        if self.photo_path:
-            self.set_x(52)
-        else:
-            self.set_x(10)
-        self.cell(0, 6, self.contact, 0, 1, "L" if self.photo_path else "C")
+        self.cell(0, 6, self.contact, 0, 1, "L")
         self.set_draw_color(200, 200, 200)
-        self.line(15, 40, 195, 40)
+        self.line(15, 48, 195, 48)
         self.ln(10)
     
     def add_section(self, title, content):
@@ -339,7 +319,6 @@ def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
     os.makedirs("outputs", exist_ok=True)
     pdf_path = os.path.join("outputs", filename)
     
-    # Select template
     if template == "2":
         pdf = TemplateModern()
     elif template == "3":
@@ -351,11 +330,9 @@ def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
     else:
         pdf = TemplateClassic()
     
-    # Set photo if provided
     if photo_path and os.path.exists(photo_path):
-        pdf.set_photo(photo_path)
+        pdf.set_photo(photo_path, size=32)
     
-    # Store name and contact
     pdf.name = user_data["full_name"].upper()
     contact = f"{user_data['email']} | {user_data['phone']}"
     if user_data.get('location'):
@@ -365,7 +342,6 @@ def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
     pdf.add_page()
     pdf.add_sections(user_data)
     
-    # Footer
     pdf.set_y(-20)
     pdf.set_font("Arial", "I", 8)
     pdf.set_text_color(150, 150, 150)
