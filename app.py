@@ -139,48 +139,51 @@ with st.form("resume_form"):
         with open(temp_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         
-        # Show original and slider in columns
-        col1, col2 = st.columns([1, 1])
-        
+        # Show original
+        col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(temp_path, width=200, caption="Original Photo")
+            st.image(temp_path, width=150, caption="Original")
         
-        with col2:
-            # Crop slider with real-time adjustment
-            crop_adjust = st.slider(
-                "Move crop up/down to center face",
-                min_value=-80,
-                max_value=80,
-                value=0,
-                step=5,
-                help="Move slider until your face is centered"
-            )
+        # Crop slider
+        crop_adjust = st.slider(
+            "Adjust crop position (move face up/down)",
+            min_value=-100,
+            max_value=100,
+            value=0,
+            step=5,
+            key="crop_slider"
+        )
         
-        # REAL-TIME PREVIEW: Show cropped image that updates with slider
-        st.write("**Real-time preview:**")
+        # REAL-TIME PREVIEW - Updates instantly when slider moves
+        st.write("**Live Preview (updates as you move the slider):**")
         
-        # Detect face and crop with current slider value
+        # Try face detection with current slider value
         cropped_img = detect_face_and_crop(temp_path, crop_adjust)
         
+        preview_col1, preview_col2 = st.columns([1, 2])
+        
         if cropped_img is not None:
-            # Show real-time cropped preview
-            st.image(cropped_img, width=150, caption="✅ Live Preview (Face detected)")
-            # Save the final cropped version
+            with preview_col1:
+                st.image(cropped_img, width=150, caption="✅ Face Detected")
+            with preview_col2:
+                st.success("✅ Face detected! Adjust slider to fine-tune.")
+            # Save the cropped version
             cropped_path = os.path.join("outputs", "cropped_photo.jpg")
             cropped_img.save(cropped_path, "JPEG", quality=90)
             photo_path = cropped_path
-            st.success("✅ Photo ready! Face detected and cropped.")
         else:
             # Fallback: center crop with adjustment
             img = Image.open(temp_path)
             cropped = crop_center_with_adjust(img, crop_adjust)
-            st.image(cropped, width=150, caption="⚠️ Live Preview (Center cropped)")
+            with preview_col1:
+                st.image(cropped, width=150, caption="⚠️ Center Cropped")
+            with preview_col2:
+                st.warning("⚠️ No face detected. Using center crop.")
             cropped_path = os.path.join("outputs", "cropped_photo.jpg")
             cropped.save(cropped_path, "JPEG", quality=90)
             photo_path = cropped_path
-            st.warning("⚠️ No face detected. Showing center crop. Try adjusting slider.")
         
-        st.caption("💡 Move the slider above to see the crop update in real-time")
+        st.caption("💡 The preview updates automatically when you move the slider")
     
     submitted = st.form_submit_button("✨ Generate Resume")
 
