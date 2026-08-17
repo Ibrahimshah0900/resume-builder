@@ -26,7 +26,8 @@ class BaseResume(FPDF):
                     img = img.convert('RGB')
                 temp_path = 'outputs/temp_photo.jpg'
                 img.save(temp_path, 'JPEG', quality=85)
-                self.image(temp_path, 160, 8, 35, 35)
+                # Photo at TOP RIGHT, completely outside text area
+                self.image(temp_path, 165, 8, 32, 32)
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
                 return True
@@ -308,7 +309,7 @@ def generate_pdf_resume(user_data, filename, template="1", photo_path=None):
         pdf = TemplateClassic()
     
     if photo_path and os.path.exists(photo_path):
-        pdf.set_photo(photo_path, size=35)
+        pdf.set_photo(photo_path, size=32)
     
     pdf.name = user_data["full_name"].upper()
     contact = f"{user_data['email']} | {user_data['phone']}"
